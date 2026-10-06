@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoonBot V4</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.app {
+    width: 100%;
+    max-width: 850px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.header {
+    background: #111827;
+    padding: 18px;
+    text-align: center;
+    border-bottom: 1px solid #334155;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 25px;
+}
+
+.header p {
+    margin: 5px 0 0;
+    color: #94a3b8;
+}
+
+.chat {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.message {
+    margin-bottom: 16px;
+    display: flex;
+}
+
+.message.user {
+    justify-content: flex-end;
+}
+
+.bubble {
+    max-width: 80%;
+    padding: 12px 15px;
+    border-radius: 15px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.bot .bubble {
+    background: #1e293b;
+}
+
+.user .bubble {
+    background: #2563eb;
+}
+
+.input-area {
+    display: flex;
+    gap: 10px;
+    padding: 15px;
+    background: #111827;
+    border-top: 1px solid #334155;
+    position: sticky;
+    bottom: 0;
+}
+
+input {
+    flex: 1;
+    padding: 13px;
+    border-radius: 12px;
+    border: 1px solid #475569;
+    background: #0f172a;
+    color: white;
+    outline: none;
+}
+
+button {
+    border: none;
+    border-radius: 12px;
+    padding: 12px 18px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+.info {
+    text-align: center;
+    color: #64748b;
+    font-size: 12px;
+    padding: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <div class="header">
+        <h1>🌙 MoonBot V4</h1>
+        <p>AI-style knowledge chatbot</p>
+    </div>
+
+    <div id="chat" class="chat">
+
+        <div class="message bot">
+            <div class="bubble">
+                🤖 Hai! Saya MoonBot V4 🌙
+
+Saya boleh cuba mencari maklumat tentang pelbagai topik menggunakan sumber Wikipedia.
+
+Cuba tanya:
+• Siapa Tunku Abdul Rahman?
+• Apa itu Malaysia?
+• Siapa Cristiano Ronaldo?
+• Apa itu graviti?
+• Siapa Albert Einstein?
+            </div>
+        </div>
+
+    </div>
+
+    <div class="info">
+        MoonBot V4 • Ciptaan Nazreel • Dibangunkan dengan bantuan ChatGPT
+    </div>
+
+    <div class="input-area">
+        <input
+            id="userInput"
+            type="text"
+            placeholder="Tanya MoonBot..."
+            autocomplete="off"
+        >
+
+        <button onclick="sendMessage()">Hantar</button>
+    </div>
+
+</div>
+
+<script>
+
+const chat = document.getElementById("chat");
+const input = document.getElementById("userInput");
+
+function addMessage(text, type) {
+
+    const message = document.createElement("div");
+    message.className = "message " + type;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
+    bubble.textContent = text;
+
+    message.appendChild(bubble);
+    chat.appendChild(message);
+
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function cleanQuestion(question) {
+
+    let q = question.trim();
+
+    const removeWords = [
+        "siapa ",
+        "apa itu ",
+        "apakah ",
+        "ceritakan tentang ",
+        "beritahu saya tentang ",
+        "terangkan tentang ",
+        "boleh terangkan ",
+        "maksud "
+    ];
+
+    for (const word of removeWords) {
+        if (q.toLowerCase().startsWith(word)) {
+            q = q.substring(word.length);
+            break;
+        }
+    }
+
+    return q.trim();
+}
+
+async function searchWikipedia(question) {
+
+    const topic = cleanQuestion(question);
+
+    if (!topic) {
+        return "Cuba taip soalan atau nama topik.";
+    }
+
+    const url =
+        "https://ms.wikipedia.org/w/api.php" +
+        "?action=query" +
+        "&generator=search" +
+        "&gsrsearch=" + encodeURIComponent(topic) +
+        "&gsrlimit=1" +
+        "&prop=extracts" +
+        "&exintro=true" +
+        "&explaintext=true" +
+        "&format=json" +
+        "&origin=*";
+
+    try {
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error("Network error");
+        }
+
+        const data = await response.json();
+
+        if (!data.query || !data.query.pages) {
+            return null;
+        }
+
+        const pages = Object.values(data.query.pages);
+
+        if (pages.length === 0) {
+            return null;
+        }
+
+        const page = pages[0];
+
+        if (!page.extract) {
+            return null;
+        }
+
+        let answer = page.extract.trim();
+
+        if (answer.length > 1500) {
+            answer = answer.substring(0, 1500) + "...";
+        }
+
+        return answer;
+
+    } catch (error) {
+
+        return null;
+    }
+}
+
+function localAnswer(question) {
+
+    const q = question.toLowerCase();
+
+    if (
+        q.includes("siapa cipta awak") ||
+        q.includes("siapa pencipta awak") ||
+        q.includes("siapa cipta moonbot") ||
+        q.includes("siapa pencipta moonbot")
+    ) {
+
+        return "🌙 MoonBot V4 dicipta oleh Nazreel dan dibangunkan dengan bantuan ChatGPT.";
+    }
+
+    if (
+        q === "hai" ||
+        q === "hello" ||
+        q === "helo" ||
+        q.includes("assalamualaikum")
+    ) {
+
+        return "Hai! 👋 Saya MoonBot V4. Apa yang anda ingin tahu?";
+    }
+
+    if (
+        q.includes("apa awak buat") ||
+        q.includes("fungsi awak") ||
+        q.includes("apa fungsi awak")
+    ) {
+
+        return "🤖 Saya MoonBot V4. Saya boleh cuba menjawab soalan dan mencari maklumat tentang pelbagai topik melalui Wikipedia.";
+    }
+
+    if (
+        q.includes("siapa awak") ||
+        q.includes("apa nama awak")
+    ) {
+
+        return "Saya MoonBot V4 🌙, chatbot yang dibangunkan oleh Nazreel dengan bantuan ChatGPT.";
+    }
+
+    if (
+        q.includes("terima kasih") ||
+        q.includes("thanks")
+    ) {
+
+        return "Sama-sama! 😎🌙";
+    }
+
+    return null;
+}
+
+async function sendMessage() {
+
+    const question = input.value.trim();
+
+    if (!question) {
+        return;
+    }
+
+    addMessage(question, "user");
+
+    input.value = "";
+
+    const local = localAnswer(question);
+
+    if (local) {
+
+        setTimeout(() => {
+            addMessage(local, "bot");
+        }, 300);
+
+        return;
+    }
+
+    addMessage("🔎 MoonBot sedang mencari maklumat...", "bot");
+
+    const answer = await searchWikipedia(question);
+
+    const messages = document.querySelectorAll(".message.bot");
+
+    if (messages.length > 0) {
+
+        const lastBubble =
+            messages[messages.length - 1].querySelector(".bubble");
+
+        if (answer) {
+
+            lastBubble.textContent =
+                "🌙 Berdasarkan maklumat yang saya jumpa:\n\n" +
+                answer;
+
+        } else {
+
+            lastBubble.textContent =
+                "🤔 Saya tak jumpa maklumat yang sesuai untuk soalan itu.\n\n" +
+                "Cuba gunakan nama/topik yang lebih khusus.";
+        }
+    }
+
+}
+
+input.addEventListener("keydown", function(event) {
+
+    if (event.key === "Enter") {
+        sendMessage();
+    }
+
+});
+
+</script>
+
+</body>
+</html>
